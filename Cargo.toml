@@ -1,0 +1,21 @@
+[package]
+name = "silex-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+
+xelis-abi = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-assembler = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-builder = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-bytecode = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-compiler = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-environment = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-lexer = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-parser = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-types = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis-vm = { git = "https://github.com/xelis-project/xelis-vm", tag = "v1.0.0" }
+xelis_common = { git = "https://github.com/xelis-project/xelis-blockchain", tag = "v1.24.0" }
