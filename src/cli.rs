@@ -31,7 +31,7 @@ pub(crate) enum OutputFormat {
     #[default]
     Binary,
     Json,
-    Hex
+    Hex,
 }
 
 impl OutputFormat {
@@ -39,7 +39,7 @@ impl OutputFormat {
         match self {
             Self::Binary => "slxc",
             Self::Json => "json",
-            Self::Hex => "hex"
+            Self::Hex => "hex",
         }
     }
 }
