@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check compilation
+        run: cargo check --locked
+
+      - name: Run tests
+        run: cargo test --all-targets --locked
