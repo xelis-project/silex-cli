@@ -8,7 +8,7 @@ use xelis_common::{
     crypto::Hash,
 };
 use xelis_environment::Environment;
-use xelis_types::{Primitive, TypePacked, ValueCell};
+use xelis_types::{Primitive, ValueCell};
 use xelis_vm::{ModuleValidator, VM};
 
 use crate::{
@@ -18,9 +18,8 @@ use crate::{
 
 pub(crate) fn run(config: RunConfig) -> Result<()> {
     let (module, environment) = load_module(&config.input)?;
-    ModuleValidator::new(&module.module, &environment)
-        .verify()
-        .context("module failed validation")?;
+    let validator = ModuleValidator::new(&module.module, &environment);
+    validator.verify().context("module failed validation")?;
 
     let entry = config
         .entry
@@ -42,7 +41,9 @@ pub(crate) fn run(config: RunConfig) -> Result<()> {
         .iter()
         .map(|argument| parse_argument(argument))
         .collect::<Result<Vec<_>>>()?;
-    validate_arguments(&module, entry, &arguments)?;
+    validator
+        .verify_invoke_chunk(entry as usize, arguments.iter())
+        .with_context(|| format!("invalid arguments for entry chunk {entry}: {arguments:?}"))?;
 
     let mut vm = VM::<ContractMetadata>::default();
     let metadata = runtime_metadata(module.version);
@@ -58,55 +59,6 @@ pub(crate) fn run(config: RunConfig) -> Result<()> {
     println!("{}", vm.run_blocking()?);
 
     Ok(())
-}
-
-fn validate_arguments(module: &ContractModule, entry: u16, arguments: &[ValueCell]) -> Result<()> {
-    let chunk = &module.module.chunks()[entry as usize];
-    let expected = chunk.access.parameters().map_or(&[][..], Vec::as_slice);
-
-    if expected.len() != arguments.len() {
-        bail!(
-            "entry chunk {entry} expects {} argument(s) [{}], got {} [{}]",
-            expected.len(),
-            format_expected_types(expected),
-            arguments.len(),
-            format_received_types(arguments),
-        );
-    }
-
-    for (index, (expected, argument)) in expected.iter().zip(arguments).enumerate() {
-        if !expected.check(argument) {
-            bail!(
-                "argument {index} for entry chunk {entry} has the wrong type: expected {expected:?}, got {}",
-                value_type(argument),
-            );
-        }
-    }
-
-    Ok(())
-}
-
-fn format_expected_types(types: &[TypePacked]) -> String {
-    types
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn format_received_types(values: &[ValueCell]) -> String {
-    values.iter().map(value_type).collect::<Vec<_>>().join(", ")
-}
-
-fn value_type(value: &ValueCell) -> String {
-    match value {
-        ValueCell::Primitive(primitive) => TypePacked::from_primitive(primitive)
-            .map(|value| format!("{value:?}"))
-            .unwrap_or_else(|| "primitive".to_owned()),
-        ValueCell::Bytes(_) => "Bytes".to_owned(),
-        ValueCell::Object(_) => "Object".to_owned(),
-        ValueCell::Map(_) => "Map".to_owned(),
-    }
 }
 
 fn load_module(path: &Path) -> Result<(ContractModule, Environment<ContractMetadata>)> {
@@ -188,28 +140,16 @@ mod tests {
     }
 
     #[test]
-    fn validates_entry_arguments() {
-        let (module, _) = compile_source("entry main(value: u64) -> u64 { return value; }")
-            .expect("source should compile");
-        let arguments = vec![Primitive::U64(7).into()];
+    fn validator_rejects_extra_entry_arguments() {
+        let (module, environment) =
+            compile_source("entry main(value: u64) -> u64 { return value; }")
+                .expect("source should compile");
+        let arguments = [Primitive::U64(1).into(), Primitive::U64(2).into()];
+        let validator = ModuleValidator::new(&module.module, &environment);
+        let error = validator
+            .verify_invoke_chunk(0, arguments.iter())
+            .expect_err("extra arguments should fail");
 
-        validate_arguments(&module, 0, &arguments).expect("argument should match");
-    }
-
-    #[test]
-    fn reports_argument_count_and_types() {
-        let (module, _) = compile_source("entry main(value: u64) -> u64 { return value; }")
-            .expect("source should compile");
-        let error = validate_arguments(&module, 0, &[]).expect_err("argument should be required");
-
-        assert!(error.to_string().contains("expects 1 argument(s)"));
-        assert!(error.to_string().contains("got 0"));
-
-        let arguments = vec![Primitive::String("wrong".to_owned()).into()];
-        let error = validate_arguments(&module, 0, &arguments).expect_err("type should mismatch");
-
-        assert!(error.to_string().contains("wrong type"));
-        assert!(error.to_string().contains("Number(U64)"));
-        assert!(error.to_string().contains("String"));
+        assert!(error.to_string().contains("expected 1, got 2"));
     }
 }
