@@ -24,6 +24,7 @@ pub(crate) fn write_module(
 ) -> Result<()> {
     let bytes = match format {
         OutputFormat::Binary => module.to_bytes(),
+        OutputFormat::Hex => module.to_hex().into_bytes(),
         OutputFormat::Json => {
             let json = serde_json::to_string_pretty(module)
                 .context("failed to serialize contract module as JSON")?;
