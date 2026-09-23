@@ -1,15 +1,15 @@
 use std::{fs, path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
+use silex_compiler::Compiler;
+use silex_environment::Environment;
+use silex_lexer::Lexer;
+use silex_parser::Parser;
 use xelis_common::{
     contract::{ContractMetadata, ContractModule, ContractVersion, build_environment},
     serializer::Serializer,
     transaction::mock::MockStorageProvider,
 };
-use silex_compiler::Compiler;
-use silex_environment::Environment;
-use silex_lexer::Lexer;
-use silex_parser::Parser;
 
 use crate::cli::OutputFormat;
 
