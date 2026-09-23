@@ -20,6 +20,8 @@ pub(crate) enum SubCommands {
     Run(RunConfig),
     /// Print a bytecode module as assembly.
     Disasm(DisasmConfig),
+    /// Recover Silex source from a bytecode module.
+    Decompile(DecompileConfig),
     /// Assemble textual bytecode into a bytecode module.
     Asm(AsmConfig),
     /// Generate a JSON ABI from a Silex source program.
@@ -93,6 +95,12 @@ pub(crate) struct RunConfig {
 
 #[derive(Debug, Args)]
 pub(crate) struct DisasmConfig {
+    #[arg(value_name = "INPUT")]
+    pub(crate) input: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct DecompileConfig {
     #[arg(value_name = "INPUT")]
     pub(crate) input: PathBuf,
 }

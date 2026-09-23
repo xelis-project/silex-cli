@@ -6,8 +6,9 @@ use std::{fs, sync::Arc};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use xelis_abi::abi_from_silex;
-use xelis_assembler::{Assembler, Disassembler};
+use silex_abi::abi_from_silex;
+use silex_assembler::{Assembler, Disassembler};
+use silex_decompiler::Decompiler;
 use xelis_common::{
     contract::{ContractModule, ContractVersion, build_environment},
     transaction::mock::MockStorageProvider,
@@ -44,6 +45,14 @@ fn main() -> Result<()> {
                 .disasemble()
                 .context("failed to disassemble bytecode module")?;
             println!("{dump}");
+        }
+        SubCommands::Decompile(config) => {
+            let module = contract::read_module(&config.input)?;
+            let environment = build_environment::<MockStorageProvider>(module.version);
+            let source = Decompiler::new(&module.module, &environment)
+                .decompile()
+                .context("failed to decompile bytecode module")?;
+            print!("{source}");
         }
         SubCommands::Abi(config) => {
             let source = read_file(&config.input)?;

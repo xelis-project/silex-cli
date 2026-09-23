@@ -2,13 +2,13 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 use serde_json::from_str;
-use xelis_bytecode::Access;
+use silex_bytecode::Access;
 use xelis_common::{
     contract::{ContractMetadata, ContractModule, ContractVersion, ModuleMetadata},
     crypto::Hash,
 };
-use xelis_environment::Environment;
-use xelis_types::{Primitive, ValueCell};
+use silex_environment::Environment;
+use silex_types::{Primitive, ValueCell};
 use xelis_vm::{ModuleValidator, VM};
 
 use crate::{

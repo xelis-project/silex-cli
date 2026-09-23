@@ -6,10 +6,10 @@ use xelis_common::{
     serializer::Serializer,
     transaction::mock::MockStorageProvider,
 };
-use xelis_compiler::Compiler;
-use xelis_environment::Environment;
-use xelis_lexer::Lexer;
-use xelis_parser::Parser;
+use silex_compiler::Compiler;
+use silex_environment::Environment;
+use silex_lexer::Lexer;
+use silex_parser::Parser;
 
 use crate::cli::OutputFormat;
 
