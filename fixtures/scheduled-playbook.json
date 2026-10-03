@@ -1,0 +1,20 @@
+{
+  "fixture": "environment.json",
+  "scheduled_executions": true,
+  "contracts": [
+    {
+      "contract": "0000000000000000000000000000000000000000000000000000000000000000",
+      "input": "playbook/scheduled.slx"
+    }
+  ],
+  "blocks": [
+    {
+      "topoheight": 100,
+      "timestamp": 1000,
+      "calls": [
+        { "contract": "0000000000000000000000000000000000000000000000000000000000000000" }
+      ]
+    },
+    { "topoheight": 105, "height": 110, "timestamp": 5000 }
+  ]
+}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silex in the browser</title>
+<h1>Silex in the browser</h1>
+<p>Compile and run a program locally with WebAssembly.</p>
+<label for="source">Source</label><br>
+<textarea id="source" rows="8" cols="70">entry main(n: u64) -> u64 {
+    return n * 2u64;
+}</textarea><br>
+<label for="argument">Argument</label>
+<input id="argument" value="21">
+<button id="run" disabled>Run</button>
+<pre id="output">Loading WebAssembly…</pre>
+<script type="module">
+import init, { compileSource, parseArgument, runProgram } from '../pkg/silex_cli.js';
+
+const button = document.querySelector('#run');
+const output = document.querySelector('#output');
+try {
+    await init();
+    button.disabled = false;
+    output.textContent = 'Ready';
+} catch (error) {
+    output.textContent = String(error);
+}
+button.addEventListener('click', () => {
+    try {
+        const module = compileSource(document.querySelector('#source').value);
+        const argument = parseArgument(document.querySelector('#argument').value);
+        output.textContent = runProgram(module, `{"arguments":[${argument}]}`);
+    } catch (error) {
+        output.textContent = String(error);
+    }
+});
+</script>
+</html>

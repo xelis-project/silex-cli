@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>WebAssembly API tests</title>
+<pre id="result">Running…</pre>
+<script type="module">
+import init from '../pkg/silex_cli.js';
+import { runTests } from './wasm_api.mjs';
+try {
+    await init();
+    await runTests();
+    document.querySelector('#result').textContent = 'WebAssembly API tests passed';
+    document.documentElement.dataset.status = 'passed';
+} catch (error) {
+    document.querySelector('#result').textContent = error.stack ?? String(error);
+    document.documentElement.dataset.status = 'failed';
+}
+</script>
+</html>

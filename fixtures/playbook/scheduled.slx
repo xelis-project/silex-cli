@@ -1,0 +1,25 @@
+pub fn record_context() -> u64 {
+    let storage = Storage::new();
+    storage.store(b"topoheight", get_current_topoheight());
+    storage.store(b"timestamp", Block::current().timestamp());
+    storage.store(b"height", Block::current().height());
+    return 0;
+}
+
+pub fn later() -> u64 {
+    require(get_current_topoheight() == 103, "due at 103");
+    require(ScheduledExecution::new_at_topoheight(record_context, [], 1000000u64, true, 105u64) != null, "schedule at 105");
+    return 0;
+}
+
+pub fn block_end() -> u64 {
+    Storage::new().store(b"block_end", get_current_topoheight());
+    return 0;
+}
+
+entry register() {
+    require(ScheduledExecution::new_at_topoheight(later, [], 1000000u64, true, 103u64) != null, "schedule at 103");
+    require(ScheduledExecution::new_at_block_end(block_end, [], 1000000u64, true) != null, "schedule at block end");
+    return 0;
+}
+

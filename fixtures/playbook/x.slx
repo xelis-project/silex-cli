@@ -1,0 +1,14 @@
+entry advance() {
+    require(get_current_topoheight() == 105, "X must run at block 105");
+    require(Block::current().timestamp() == 1005, "time must advance deterministically");
+
+    let a = Hash::from_hex("0101010101010101010101010101010101010101010101010101010101010101");
+    let contract = Contract::new(a).unwrap();
+    let deposits: map<Hash, u64> = {};
+    let count: u64 = contract.call(2u16, [], deposits);
+    require(count == 2, "A's persistent data must survive between blocks");
+
+    Storage::new().store(b"count", count);
+
+    return 0;
+}

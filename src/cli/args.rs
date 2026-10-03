@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use silex_cli::xelis_common::crypto::Hash;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -18,6 +19,8 @@ pub(crate) enum SubCommands {
     Compile(CompileConfig),
     /// Run an entry chunk from a Silex source or compiled bytecode module.
     Run(RunConfig),
+    /// Execute an ordered contract timeline against a shared fixture.
+    Playbook(PlaybookConfig),
     /// Print a bytecode module as assembly.
     Disasm(DisasmConfig),
     /// Recover Silex source from a bytecode module.
@@ -29,7 +32,7 @@ pub(crate) enum SubCommands {
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
-pub(crate) enum OutputFormat {
+pub(super) enum OutputFormat {
     #[default]
     Binary,
     Json,
@@ -71,26 +74,52 @@ impl CompileConfig {
 pub(crate) struct RunConfig {
     #[arg(value_name = "INPUT")]
     pub(crate) input: PathBuf,
+
     #[arg(
         short,
         long,
         value_name = "ID",
-        help = "Entry chunk ID to invoke (defaults to the first entry chunk)"
+        help = "Entry chunk ID (defaults to the first entry chunk)"
     )]
     pub(crate) entry: Option<u16>,
+
     #[arg(
         long,
         value_name = "GAS",
         help = "Maximum gas available to the program"
     )]
     pub(crate) gas_limit: Option<u64>,
+
+    /// Contract hash (defaults to a hash of the compiled contract module).
+    #[arg(long)]
+    pub(crate) contract: Option<Hash>,
+
+    /// Optional JSON fixture containing storage and execution settings.
+    #[arg(long, value_name = "FIXTURE_PATH")]
+    pub(crate) fixture: Option<PathBuf>,
+
+    /// Persist the resulting contract state back to the supplied fixture.
+    #[arg(long, requires = "fixture")]
+    pub(crate) update_fixture: bool,
+
     #[arg(
         value_name = "ARG",
         trailing_var_arg = true,
         allow_hyphen_values = true,
-        help = "Arguments: null, bool, unsigned integer, string, or a JSON ValueCell"
+        help = "Arguments: null, bool, unsigned integer, string, or a JSON value"
     )]
     pub(crate) arguments: Vec<String>,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct PlaybookConfig {
+    /// JSON playbook containing a fixture path, contracts, and ordered blocks.
+    #[arg(value_name = "PLAYBOOK_PATH")]
+    pub(crate) input: PathBuf,
+
+    /// Persist the final state back to the fixture referenced by the playbook.
+    #[arg(long)]
+    pub(crate) update_fixture: bool,
 }
 
 #[derive(Debug, Args)]
@@ -155,7 +184,9 @@ fn output_path(input: &Path, output: Option<&PathBuf>, format: OutputFormat) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::path::PathBuf;
+
+    use super::{AbiConfig, AsmConfig, CompileConfig, OutputFormat};
 
     #[test]
     fn compile_output_defaults_to_slxc() {

@@ -1,0 +1,25 @@
+entry initialize() {
+    require(get_current_topoheight() == 100, "A must run at block 100");
+
+    Storage::new().store(b"count", 1u64);
+    MemoryStorage::new(true).store(b"shared", 42u64);
+
+    return 0;
+}
+
+entry verify_shared_state() {
+    let shared: u64 = MemoryStorage::new(true).load(b"shared").unwrap();
+    require(shared == 42, "shared state must survive calls in the same block");
+
+    return 0;
+}
+
+pub fn increment() -> u64 {
+    require(!MemoryStorage::new(true).has(b"shared"), "shared memory must reset for the next block");
+
+    let storage = Storage::new();
+    let count: u64 = storage.load(b"count").unwrap();
+    storage.store(b"count", count + 1);
+
+    return count + 1;
+}

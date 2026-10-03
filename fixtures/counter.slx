@@ -1,0 +1,6 @@
+entry increment() {
+    let storage = Storage::new();
+    let count: u64 = storage.load(b"count").unwrap_or(0u64);
+    storage.store(b"count", count + 1);
+    return 0;
+}

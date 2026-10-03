@@ -1,0 +1,12 @@
+// Compute a factorial using recursion.
+fn factorial(value: u64) -> u64 {
+    if value <= 1u64 {
+        return 1u64;
+    }
+
+    return value * factorial(value - 1u64);
+}
+
+entry main(value: u64) -> u64 {
+    return factorial(value);
+}

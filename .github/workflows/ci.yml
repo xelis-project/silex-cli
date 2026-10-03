@@ -27,3 +27,22 @@ jobs:
 
       - name: Run tests
         run: cargo test --all-targets --locked
+
+  wasm:
+    name: WebAssembly API
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Build browser package
+        run: wasm-pack build --target web --dev --no-default-features --features wasm --locked

@@ -1,0 +1,18 @@
+entry observe() {
+    require(Block::current().height() == 100, "B must run at height 100");
+    require(Block::current().timestamp() == 1000, "B must see the configured timestamp");
+
+    let a = Hash::from_hex("0101010101010101010101010101010101010101010101010101010101010101");
+    let count: u64 = ReadOnlyStorage::new(a).unwrap().load(b"count").unwrap();
+    require(count == 1, "A must execute before B");
+
+    Storage::new().store(b"observed", count);
+
+    return 0;
+}
+
+entry fail() {
+    Storage::new().store(b"observed", 99u64);
+
+    return 1;
+}
