@@ -217,6 +217,13 @@ async fn json_provider_exposes_assets_accounts_and_typed_storage() {
 #[test]
 fn invalid_snapshots_are_rejected() {
     assert!(serde_json::from_str::<JsonStorage>(r#"{"acounts":{}}"#).is_err());
+    assert!(serde_json::from_str::<JsonStorage>(r#"{"execution":{}}"#).is_err());
+    assert!(
+        serde_json::from_str::<JsonStorage>(
+            r#"{"contract":"0000000000000000000000000000000000000000000000000000000000000000"}"#
+        )
+        .is_err()
+    );
     let mut storage = funded();
     let entry = StorageEntry {
         key: Primitive::U64(1).into(),

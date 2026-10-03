@@ -6,14 +6,12 @@ use std::{
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use silex_cli::{
-    ExecutionConfig, JsonStorage, Playbook,
+    JsonStorage, Playbook,
     playbook::{PlaybookBlock, PlaybookContract},
     xelis_common::crypto::Hash,
 };
 
 use super::modules::load_module;
-
-type Fixture = ExecutionConfig;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -35,7 +33,7 @@ struct FilePlaybook {
 
 pub(crate) struct LoadedPlaybook {
     pub playbook: Playbook,
-    pub fixture: Fixture,
+    pub fixture: JsonStorage,
     pub fixture_path: PathBuf,
 }
 
@@ -52,17 +50,17 @@ fn resolve_path(directory: &Path, path: PathBuf) -> PathBuf {
     }
 }
 
-pub(crate) fn load_fixture(path: &Path) -> Result<Fixture> {
+pub(crate) fn load_fixture(path: &Path) -> Result<JsonStorage> {
     let path = absolute_path(path)?;
-    let fixture: Fixture = serde_json::from_slice(&fs::read(&path)?)
-        .with_context(|| format!("invalid execution config {}", path.display()))?;
-    fixture.storage.validate()?;
+    let fixture: JsonStorage = serde_json::from_slice(&fs::read(&path)?)
+        .with_context(|| format!("invalid environment fixture {}", path.display()))?;
+    fixture.validate()?;
     Ok(fixture)
 }
 
-pub(crate) fn save_fixture(fixture: &Fixture, path: &Path) -> Result<()> {
+pub(crate) fn save_fixture(fixture: &JsonStorage, path: &Path) -> Result<()> {
     fs::write(path, serde_json::to_string_pretty(fixture)? + "\n")
-        .with_context(|| format!("failed to write config {}", path.display()))
+        .with_context(|| format!("failed to write environment fixture {}", path.display()))
 }
 
 pub(crate) fn load_playbook(path: &Path) -> Result<LoadedPlaybook> {

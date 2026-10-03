@@ -94,9 +94,13 @@ pub(crate) struct RunConfig {
     #[arg(long)]
     pub(crate) contract: Option<Hash>,
 
-    /// Optional JSON fixture containing storage and execution settings.
+    /// Optional JSON fixture containing only chain state.
     #[arg(long, value_name = "FIXTURE_PATH")]
     pub(crate) fixture: Option<PathBuf>,
+
+    /// Separate JSON execution options (entry, arguments, caller, gas, and permissions).
+    #[arg(long, value_name = "EXECUTION_PATH", requires = "fixture")]
+    pub(crate) execution: Option<PathBuf>,
 
     /// Persist the resulting contract state back to the supplied fixture.
     #[arg(long, requires = "fixture")]

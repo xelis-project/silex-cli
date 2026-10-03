@@ -32,22 +32,19 @@ The fixture stays unchanged unless `--update-fixture` is set. Contract execution
 
 ## Fixtures
 
-A fixture is a JSON file containing a required `storage` section and optional contract execution settings:
+A fixture contains only chain state, using the same JSON format as `JsonStorage`:
 
 ```json
 {
-  "storage": {
-    "mainnet": false,
-    "topoheight": 100
-  },
-  "execution": {
-    "entry": 0,
-    "gas_limit": 1000000
-  }
+  "mainnet": false,
+  "topoheight": 100,
+  "contracts": {},
+  "accounts": {},
+  "assets": {}
 }
 ```
 
-The environment contains state for all contract hashes and has no source file path. Pass the source or compiled module to `run` separately. Select its hash with `--contract <64-character hex hash>`; when omitted, `run` computes the XELIS BLAKE3 hash of the serialized contract module, including its version. Source, binary, JSON, and hex representations of the same module use the same hash. The CLI does not use the fixture’s `contract` setting to select the hash. The module replaces only that contract’s code, preserving data and balances for all contracts. Reuse the same environment to run different files and hashes.
+The environment contains state for all contract hashes and has no source file path. Pass the source or compiled module to `run` separately. Select its hash with `--contract <64-character hex hash>`; when omitted, `run` computes the XELIS BLAKE3 hash of the serialized contract module, including its version. Source, binary, JSON, and hex representations of the same module use the same hash. The module replaces only that contract’s code, preserving data and balances for all contracts. Reuse the same environment to run different files and hashes.
 
 | Storage field | Configures |
 | --- | --- |
@@ -58,9 +55,22 @@ The environment contains state for all contract hashes and has no source file pa
 | `contracts` | Registered modules, data, and balances |
 | `scheduled_executions`, `callbacks` | Scheduled calls and event listeners |
 
-`storage: {}` uses an empty testnet environment at topoheight 1. Amounts use atomic units; the zero asset hash represents XELIS. Contract data and arguments use upstream JSON encoding for values.
+An empty fixture `{}` uses an empty testnet environment at topoheight 1. Amounts use atomic units; the zero asset hash represents XELIS. Contract data and arguments use upstream JSON encoding for values.
 
-Execution settings also support `hook`, `arguments`, `deposits`, `gas_sources`, `permission`, and either `caller` or `transaction`. CLI entry, gas limit, and supplied arguments override fixture settings. Use `permission: "all"` to allow inter-contract calls and `hook: 0` for a constructor.
+Execution options are supplied separately through CLI flags or `--execution execution.json`:
+
+```json
+{
+  "entry": 0,
+  "gas_limit": 1000000
+}
+```
+
+```sh
+silex-cli run --fixture fixtures/environment.json --execution fixtures/execution.json contract.slx
+```
+
+The execution options file also supports `hook`, `arguments`, `deposits`, `gas_sources`, `permission`, and either `caller` or `transaction`. CLI entry, gas limit, and supplied arguments override this file. Without it, execution uses default options. Use `permission: "all"` to allow inter-contract calls and `hook: 0` for a constructor. Playbooks keep execution options on each call. Saving a fixture writes only chain state.
 
 See [fixtures/environment.json](fixtures/environment.json) for a complete example. Deposit funds and gas budgets must already be reserved in the fixture, as expected by the network runner.
 
@@ -133,7 +143,7 @@ async fn run<Storage: ExecutionStorage>(storage: Storage) -> anyhow::Result<RunR
 
 Use `run_module` with a compiled module or `run_source` with source text, `invoke` for a complete upstream invocation, and `run_program` for standalone programs. Results include execution status and logs; check `result.execution.is_success()` for contract success.
 
-The library operates entirely in memory. Callers provide typed storage, modules, and execution options and handle serialization and persistence themselves. `ExecutionConfig` contains the contract, storage, and execution options. Each `PlaybookContract` contains a contract hash and compiled `module`; the library playbook has no fixture or file paths. The CLI handles file loading, relative paths, and updates using its existing fixture and playbook formats.
+The library operates entirely in memory. Callers provide typed storage, modules, and execution options and handle serialization and persistence themselves. `JsonStorage` represents the environment; `RunOptions` represents a separate execution request. Each `PlaybookContract` contains a contract hash and compiled `module`; the library playbook has no fixture or file paths. The CLI handles file loading, relative paths, and updates using the environment, execution options, and playbook file formats.
 
 The `contract` module exposes compilation, assembly, disassembly, decompilation, and ABI generation.
 

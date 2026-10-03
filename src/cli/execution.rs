@@ -14,8 +14,8 @@ use silex_cli::{
 use super::{
     args::SubCommands,
     io::{
-        load_fixture, load_module, load_playbook, read_file, read_module, save_fixture,
-        write_module, write_text,
+        load_execution, load_fixture, load_module, load_playbook, read_file, read_module,
+        save_fixture, write_module, write_text,
     },
 };
 
@@ -67,7 +67,12 @@ pub(super) async fn run(command: SubCommands) -> Result<()> {
 
             if let Some(path) = &config.fixture {
                 let mut fixture = load_fixture(path)?;
-                let mut options = fixture.execution.clone();
+                let mut options = config
+                    .execution
+                    .as_deref()
+                    .map(load_execution)
+                    .transpose()?
+                    .unwrap_or_default();
 
                 if let Some(entry) = config.entry {
                     options.entry = Some(entry);
@@ -84,10 +89,10 @@ pub(super) async fn run(command: SubCommands) -> Result<()> {
 
                 let module = load_module::<JsonStorage>(&config.input)?;
                 let contract = config.contract.unwrap_or_else(|| hash(&module.to_bytes()));
-                let mut simulator = Simulator::new(fixture.storage)?;
+                let mut simulator = Simulator::new(fixture)?;
                 println!("Contract hash: {contract}");
                 let result = simulator.run_module(contract, module, options).await?;
-                fixture.storage = simulator.into_storage();
+                fixture = simulator.into_storage();
 
                 if config.update_fixture {
                     save_fixture(&fixture, path)?;
@@ -115,8 +120,8 @@ pub(super) async fn run(command: SubCommands) -> Result<()> {
         SubCommands::Playbook(config) => {
             let loaded = load_playbook(&config.input)?;
             let mut fixture = loaded.fixture;
-            let outcome = loaded.playbook.execute(fixture.storage).await?;
-            fixture.storage = outcome.storage;
+            let outcome = loaded.playbook.execute(fixture).await?;
+            fixture = outcome.storage;
 
             if config.update_fixture {
                 save_fixture(&fixture, &loaded.fixture_path)?;
