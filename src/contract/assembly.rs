@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::latest_contract_version;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use silex_assembler::{Assembler, Disassembler};
@@ -57,7 +58,7 @@ pub fn assemble(source: &str) -> Result<ContractModule> {
         }
         metadata.version
     } else {
-        ContractVersion::V1
+        latest_contract_version()
     };
     Ok(ContractModule {
         version,
@@ -92,6 +93,21 @@ mod tests {
     use super::{assemble, disassemble};
     use crate::{JsonStorage, Primitive, compile_source, run_program};
     use xelis_common::serializer::Serializer;
+
+    #[test]
+    fn assembly_defaults_to_latest_but_preserves_explicit_version() {
+        let (mut module, _) = compile_source("fn main() -> u64 { return 10; }").unwrap();
+        let assembly = disassemble(&module).unwrap();
+        let instructions = assembly.split_once('\n').unwrap().1;
+        assert_eq!(
+            assemble(instructions).unwrap().version,
+            super::latest_contract_version()
+        );
+
+        module.version = xelis_common::contract::ContractVersion::V0;
+        let assembly = disassemble(&module).unwrap();
+        assert_eq!(assemble(&assembly).unwrap().version, module.version);
+    }
 
     #[test]
     fn assembly_round_trip_preserves_metadata_and_execution() {

@@ -1,6 +1,6 @@
 //! Command dispatch; files are decoded before calling the library.
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use silex_cli::{
     JsonStorage, Simulator,
     contract::{assemble, compile_source, decompile, disassemble, generate_abi},
@@ -12,7 +12,7 @@ use silex_cli::{
 };
 
 use super::{
-    args::SubCommands,
+    args::{EnvOutputFormat, SubCommands},
     io::{
         load_execution, load_fixture, load_module, load_playbook, read_file, read_module,
         save_fixture, write_module, write_text,
@@ -21,6 +21,17 @@ use super::{
 
 pub(super) async fn run(command: SubCommands) -> Result<()> {
     match command {
+        SubCommands::Env(config) => {
+            let listing = silex_cli::environment::listing(config.contract_version);
+            match config.format {
+                EnvOutputFormat::Text => print!("{listing}"),
+                EnvOutputFormat::Json => println!(
+                    "{}",
+                    serde_json::to_string_pretty(&listing)
+                        .context("failed to serialize environment as JSON")?
+                ),
+            }
+        }
         SubCommands::Compile(config) => {
             let source = read_file(&config.input)?;
             let (module, _) = compile_source(&source)?;

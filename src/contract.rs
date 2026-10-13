@@ -12,7 +12,15 @@ use xelis_common::contract::{
 
 use crate::JsonStorage;
 
-/// Compile source with the bundled JSON provider and V1 contract environment.
+/// Latest contract version supported by the bundled toolchain.
+pub fn latest_contract_version() -> ContractVersion {
+    ContractVersion::variants()
+        .into_iter()
+        .max()
+        .expect("at least one contract version")
+}
+
+/// Compile source with the bundled JSON provider and latest contract environment.
 pub fn compile_source(source: &str) -> Result<(ContractModule, Environment<ContractMetadata>)> {
     compile_source_with_storage::<JsonStorage>(source)
 }
@@ -21,7 +29,8 @@ pub fn compile_source(source: &str) -> Result<(ContractModule, Environment<Contr
 pub fn compile_source_with_storage<Storage: for<'ty> ContractProvider<'ty>>(
     source: &str,
 ) -> Result<(ContractModule, Environment<ContractMetadata>)> {
-    let environment = build_environment::<Storage>(ContractVersion::V1);
+    let version = latest_contract_version();
+    let environment = build_environment::<Storage>(version);
     let tokens = Lexer::new(source)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| anyhow::anyhow!("failed to lex Silex source: {error}"))?;
@@ -36,7 +45,7 @@ pub fn compile_source_with_storage<Storage: for<'ty> ContractProvider<'ty>>(
         .context("failed to compile Silex source")?;
 
     let module = ContractModule {
-        version: ContractVersion::V1,
+        version,
         module: Arc::new(module),
     };
 
@@ -72,27 +81,24 @@ pub fn decompile(module: &ContractModule) -> Result<String> {
 pub fn generate_abi(source: &str) -> Result<String> {
     silex_abi::abi_from_silex(
         source,
-        build_environment::<JsonStorage>(ContractVersion::V1),
+        build_environment::<JsonStorage>(latest_contract_version()),
     )
     .context("failed to generate ABI")
 }
 
 #[cfg(test)]
 mod tests {
-    use xelis_common::{
-        contract::{ContractModule, ContractVersion},
-        serializer::Serializer,
-    };
+    use xelis_common::{contract::ContractModule, serializer::Serializer};
 
-    use super::compile_source;
+    use super::{compile_source, latest_contract_version};
 
     const SOURCE: &str = "fn main() -> u64 { return 10; }";
 
     #[test]
-    fn source_compiles_to_v1_contract_module() {
+    fn source_compiles_to_latest_contract_module() {
         let (module, _) = compile_source(SOURCE).expect("source should compile");
 
-        assert_eq!(module.version, ContractVersion::V1);
+        assert_eq!(module.version, latest_contract_version());
         assert!(!module.module.chunks().is_empty());
     }
 

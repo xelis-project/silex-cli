@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use silex_cli::xelis_common::crypto::Hash;
+use silex_cli::latest_contract_version;
+use silex_cli::xelis_common::{contract::ContractVersion, crypto::Hash};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -15,6 +16,9 @@ pub(crate) struct Config {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum SubCommands {
+    /// List environment functions, methods, constants, types, and hooks.
+    #[command(alias = "environment")]
+    Env(EnvConfig),
     /// Compile a Silex source program into a bytecode module.
     Compile(CompileConfig),
     /// Run an entry chunk from a Silex source or compiled bytecode module.
@@ -29,6 +33,28 @@ pub(crate) enum SubCommands {
     Asm(AsmConfig),
     /// Generate a JSON ABI from a Silex source program.
     Abi(AbiConfig),
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct EnvConfig {
+    #[arg(long, value_name = "VERSION", default_value_t = latest_contract_version(),
+        help = "Contract version (defaults to the latest supported version)")]
+    pub(crate) contract_version: ContractVersion,
+    #[arg(
+        short,
+        long,
+        value_enum,
+        default_value_t,
+        help = "Environment output format"
+    )]
+    pub(crate) format: EnvOutputFormat,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub(crate) enum EnvOutputFormat {
+    #[default]
+    Text,
+    Json,
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
@@ -191,6 +217,43 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{AbiConfig, AsmConfig, CompileConfig, OutputFormat};
+    use super::{Config, ContractVersion, EnvOutputFormat, SubCommands};
+    use clap::Parser;
+
+    #[test]
+    fn environment_defaults_to_latest_and_text() {
+        let config = Config::try_parse_from(["silex-cli", "env"]).unwrap();
+        let SubCommands::Env(config) = config.command else {
+            panic!("expected env")
+        };
+        assert_eq!(
+            config.contract_version,
+            ContractVersion::variants().into_iter().max().unwrap()
+        );
+        assert_eq!(config.format, EnvOutputFormat::Text);
+    }
+
+    #[test]
+    fn environment_accepts_versions_alias_and_json() {
+        for version in ["v0", "0"] {
+            let config = Config::try_parse_from([
+                "silex-cli",
+                "environment",
+                "--contract-version",
+                version,
+                "-f",
+                "json",
+            ])
+            .unwrap();
+            let SubCommands::Env(config) = config.command else {
+                panic!("expected env")
+            };
+            assert_eq!(config.contract_version, ContractVersion::V0);
+            assert_eq!(config.format, EnvOutputFormat::Json);
+        }
+        assert!(Config::try_parse_from(["silex-cli", "env", "--contract-version", "v99"]).is_err());
+        assert!(Config::try_parse_from(["silex-cli", "env", "--format", "binary"]).is_err());
+    }
 
     #[test]
     fn compile_output_defaults_to_slxc() {

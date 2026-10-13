@@ -1,13 +1,14 @@
 //! Compile and execute Silex contracts with caller-supplied modules, options, and storage.
 
 pub mod contract;
+pub mod environment;
 pub mod playbook;
 pub mod program;
 pub mod runtime;
 pub mod state;
 pub mod storage;
 
-pub use contract::compile_source;
+pub use contract::{compile_source, latest_contract_version};
 pub use playbook::{BlockStorage, Playbook, PlaybookOutcome, PlaybookReport};
 pub use program::{parse_argument, run_program};
 pub use runtime::{Invocation, RunOptions, RunResult, Simulator};
