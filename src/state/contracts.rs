@@ -14,9 +14,9 @@ use xelis_common::{
     block::BlockVersion,
     config::XELIS_ASSET,
     contract::{
-        ChainState as ContractChainState, ChainStateChanges, ContractLogs, ContractModule,
-        ContractProvider, ExecutionsChanges, ExecutionsManager, InterContractPermission,
-        vm::ContractCaller,
+        ChainState as ContractChainState, ChainStateChanges, ContractCache, ContractLogs,
+        ContractModule, ContractProvider, ExecutionsChanges, ExecutionsManager,
+        InterContractPermission, vm::ContractCaller,
     },
     crypto::Hash,
     transaction::{
@@ -164,6 +164,22 @@ impl<'a, 'ty, Storage: for<'p> ContractProvider<'p> + Send + Sync>
             );
         }
 
+        Ok(())
+    }
+
+    /// Apply the runner's legacy updates to existing cached storage values.
+    async fn merge_contract_storage(&mut self, caches: HashMap<Hash, ContractCache>) -> Result<()> {
+        for (contract, changes) in caches {
+            if let Some(cache) = self.contract_caches.get_mut(&contract) {
+                for (key, entry) in changes.storage {
+                    if let (Some((_, value)), Some(Some((_, current)))) =
+                        (entry, cache.storage.get_mut(&key))
+                    {
+                        *current = value;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 

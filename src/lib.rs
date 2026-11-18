@@ -12,7 +12,7 @@ pub use contract::{compile_source, latest_contract_version};
 pub use playbook::{BlockStorage, Playbook, PlaybookOutcome, PlaybookReport};
 pub use program::{parse_argument, run_program};
 pub use runtime::{Invocation, RunOptions, RunResult, Simulator};
-pub use silex_types::{Primitive, ValueCell};
+pub use silex_types::{OwnedValue, Primitive};
 pub use storage::{ExecutionStorage, JsonStorage};
 pub use xelis_common;
 

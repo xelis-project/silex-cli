@@ -5,7 +5,7 @@ use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use silex_assembler::{Assembler, Disassembler};
 use silex_bytecode::Access;
-use silex_types::ValueCell;
+use silex_types::OwnedValue;
 use xelis_common::contract::{ContractModule, ContractVersion};
 
 // The upstream instruction dump omits constants and parameter types. Keep them
@@ -16,7 +16,7 @@ const METADATA_PREFIX: &str = "// @silex-module ";
 #[serde(deny_unknown_fields)]
 struct AssemblyMetadata {
     version: ContractVersion,
-    constants: Vec<ValueCell>,
+    constants: Vec<OwnedValue>,
     access: Vec<Access>,
 }
 
@@ -91,7 +91,7 @@ pub fn disassemble(module: &ContractModule) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::{assemble, disassemble};
-    use crate::{JsonStorage, Primitive, compile_source, run_program};
+    use crate::{JsonStorage, OwnedValue, Primitive, compile_source, run_program};
     use xelis_common::serializer::Serializer;
 
     #[test]
@@ -116,15 +116,14 @@ mod tests {
         ).unwrap();
         let assembly = disassemble(&module).unwrap();
         let restored = assemble(&assembly).unwrap();
-        assert_eq!(restored.to_bytes(), module.to_bytes());
+        assert_eq!(restored.to_bytes().unwrap(), module.to_bytes().unwrap());
         let result =
-            run_program::<JsonStorage>(&restored, None, vec![Primitive::U64(21).into()], None)
+            run_program::<JsonStorage>(&restored, None, vec![OwnedValue::from(21u64)], None)
                 .unwrap();
         assert_eq!(result.as_u64().unwrap(), 42);
         let edited = assemble(&assembly.replace("MUL", "ADD")).unwrap();
         let result =
-            run_program::<JsonStorage>(&edited, None, vec![Primitive::U64(21).into()], None)
-                .unwrap();
+            run_program::<JsonStorage>(&edited, None, vec![OwnedValue::from(21u64)], None).unwrap();
         assert_eq!(
             result.as_u64().unwrap(),
             23,

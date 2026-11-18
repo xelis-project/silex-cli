@@ -13,13 +13,13 @@ use silex_cli::xelis_common::{
     serializer::Serializer,
     transaction::mock::MockChainState,
 };
-use silex_cli::{Invocation, JsonStorage, Primitive, Simulator, ValueCell, compile_source};
+use silex_cli::{Invocation, JsonStorage, OwnedValue, Primitive, Simulator, compile_source};
 use std::{borrow::Cow, collections::HashMap};
 
 #[tokio::test]
 async fn results_logs_and_state_match_upstream_mock_chain_state() {
     for (exit_code, gas_limit, initial) in [
-        (0, 100_000, None),
+        (0u64, 100_000, None),
         (0, 100_000, Some(7)),
         (1, 100_000, Some(7)),
         (0, 0, Some(7)),
@@ -43,7 +43,7 @@ async fn results_logs_and_state_match_upstream_mock_chain_state() {
                 ..Default::default()
             },
         );
-        let key: ValueCell = Primitive::String("key".into()).into();
+        let key: OwnedValue = Primitive::String("key".into()).into();
         if let Some(value) = initial {
             storage
                 .contracts
@@ -52,12 +52,12 @@ async fn results_logs_and_state_match_upstream_mock_chain_state() {
                 .data
                 .push(StorageEntry {
                     key: key.clone(),
-                    value: Primitive::U64(value).into(),
+                    value: OwnedValue::from(value),
                 });
         }
         let deposits = IndexMap::new();
         let decompressed = HashMap::new();
-        let parameters = vec![Primitive::U64(exit_code).into()];
+        let parameters = vec![OwnedValue::from(exit_code)];
         let caller = ContractCaller::System;
         let gas_sources: IndexMap<_, _> = IndexMap::new();
         let mut direct_state = MockChainState::with(BlockVersion::V7);
@@ -71,7 +71,7 @@ async fn results_logs_and_state_match_upstream_mock_chain_state() {
                 .contracts
                 .entry(hash.clone())
                 .or_default()
-                .insert(key.clone(), (0, Some(Primitive::U64(value).into())));
+                .insert(key.clone(), (0, Some(OwnedValue::from(value))));
         }
         let direct = invoke_contract(
             caller.clone(),
@@ -135,22 +135,24 @@ async fn results_logs_and_state_match_upstream_mock_chain_state() {
             .into_iter()
             .flat_map(|data| data.iter())
             .filter_map(|(key, (_, value))| {
-                value.as_ref().map(|value| (key.to_bytes(), value.clone()))
+                value
+                    .as_ref()
+                    .map(|value| (key.to_bytes().unwrap(), value.clone()))
             })
             .collect();
         if let Some(cache) = direct_state.contract_caches.get(&hash) {
             for (key, entry) in &cache.storage {
                 if let Some(value) = entry.as_ref().and_then(|(_, value)| value.as_ref()) {
-                    direct_data.insert(key.to_bytes(), value.clone());
+                    direct_data.insert(key.to_bytes().unwrap(), value.clone());
                 } else {
-                    direct_data.remove(&key.to_bytes());
+                    direct_data.remove(&key.to_bytes().unwrap());
                 }
             }
         }
         let actual_data: HashMap<_, _> = actual_contract
             .data
             .iter()
-            .map(|entry| (entry.key.to_bytes(), entry.value.clone()))
+            .map(|entry| (entry.key.to_bytes().unwrap(), entry.value.clone()))
             .collect();
         assert_eq!(actual_data, direct_data);
         if exit_code == 0 && gas_limit > 0 {
@@ -162,7 +164,7 @@ async fn results_logs_and_state_match_upstream_mock_chain_state() {
         } else {
             assert_eq!(
                 actual_data
-                    .get(&key.to_bytes())
+                    .get(&key.to_bytes().unwrap())
                     .map(|value| value.as_u64().unwrap()),
                 initial,
                 "Failed calls must preserve the initial state"

@@ -105,10 +105,10 @@ mod tests {
     #[test]
     fn contract_module_round_trips_as_binary() {
         let (module, _) = compile_source(SOURCE).expect("source should compile");
-        let encoded = module.to_bytes();
+        let encoded = module.to_bytes().unwrap();
         let decoded = ContractModule::from_bytes(&encoded).expect("binary should decode");
 
-        assert_eq!(decoded.to_bytes(), module.to_bytes());
+        assert_eq!(decoded.to_bytes().unwrap(), module.to_bytes().unwrap());
     }
 
     #[test]
@@ -117,6 +117,6 @@ mod tests {
         let encoded = serde_json::to_string(&module).expect("JSON should encode");
         let decoded: ContractModule = serde_json::from_str(&encoded).expect("JSON should decode");
 
-        assert_eq!(decoded.to_bytes(), module.to_bytes());
+        assert_eq!(decoded.to_bytes().unwrap(), module.to_bytes().unwrap());
     }
 }

@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result, ensure};
 use silex_bytecode::Access;
-use silex_types::{Primitive, ValueCell};
+use silex_types::{OwnedValue, Primitive};
 use xelis_common::{
     contract::{ContractMetadata, ContractModule, ContractProvider, ModuleMetadata},
     crypto::Hash,
@@ -16,9 +16,9 @@ use crate::contract::environment_for;
 pub fn run_program<Storage: for<'ty> ContractProvider<'ty>>(
     module: &ContractModule,
     entry: Option<u16>,
-    arguments: Vec<ValueCell>,
+    arguments: Vec<OwnedValue>,
     gas_limit: Option<u64>,
-) -> Result<ValueCell> {
+) -> Result<OwnedValue> {
     let environment = environment_for::<Storage>(module.version);
     let validator = ModuleValidator::new(&module.module, &environment);
     validator.verify().context("module failed validation")?;
@@ -69,21 +69,21 @@ pub(crate) fn resolve_entry(module: &Module, requested: Option<u16>) -> Result<u
     Ok(entry)
 }
 
-/// Parse the original positional argument syntax, including explicit JSON ValueCells.
-pub fn parse_argument(argument: &str) -> Result<ValueCell> {
+/// Parse positional arguments, including values encoded as typed JSON.
+pub fn parse_argument(argument: &str) -> Result<OwnedValue> {
     if let Ok(value) = serde_json::from_str(argument) {
         return Ok(value);
     }
 
-    let primitive = match argument {
-        "null" => Primitive::Null,
-        "true" => Primitive::Boolean(true),
-        "false" => Primitive::Boolean(false),
-        _ => match argument.parse() {
-            Ok(value) => Primitive::U64(value),
-            Err(_) => Primitive::String(argument.to_owned()),
+    let value = match argument {
+        "null" => OwnedValue::from(Primitive::Null),
+        "true" => OwnedValue::from(true),
+        "false" => OwnedValue::from(false),
+        _ => match argument.parse::<u64>() {
+            Ok(value) => OwnedValue::from(value),
+            Err(_) => OwnedValue::from(argument.to_owned()),
         },
     };
 
-    Ok(primitive.into())
+    Ok(value)
 }

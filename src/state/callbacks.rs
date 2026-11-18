@@ -38,7 +38,7 @@ impl<Storage: for<'ty> ContractProvider<'ty> + Send + Sync> ChainState<Storage> 
                         self,
                         Cow::Owned(contract.clone()),
                         None,
-                        event.params.iter().map(|p| p.deep_clone()),
+                        event.params.iter().cloned(),
                         callback.gas_sources,
                         callback.max_gas,
                         InvokeContract::Chunk(callback.chunk_id, false),

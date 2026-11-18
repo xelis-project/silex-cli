@@ -289,9 +289,12 @@ impl JsonStorage {
 
         // HashMap iteration must not affect saved fixtures or deterministic replay comparisons.
         for contract in storage.contracts.values_mut() {
-            contract
-                .data
-                .sort_by_cached_key(|entry| entry.key.to_bytes());
+            let mut entries = std::mem::take(&mut contract.data)
+                .into_iter()
+                .map(|entry| Ok((entry.key.to_bytes()?, entry)))
+                .collect::<Result<Vec<_>>>()?;
+            entries.sort_by(|(left, _), (right, _)| left.cmp(right));
+            contract.data = entries.into_iter().map(|(_, entry)| entry).collect();
         }
 
         storage.callbacks.sort_by(|left, right| {

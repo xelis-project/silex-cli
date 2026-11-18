@@ -10,9 +10,10 @@ use silex_cli::xelis_common::{
     config::XELIS_ASSET,
     contract::{ContractLogs, ContractModule, ContractProvider, ContractStorage},
     crypto::{Hash, KeyPair, PublicKey},
+    serializer::ReaderError,
     transaction::verify::BlockchainVerificationState,
 };
-use silex_cli::{ExecutionStorage, JsonStorage, Primitive, RunOptions, Simulator, ValueCell};
+use silex_cli::{ExecutionStorage, JsonStorage, OwnedValue, RunOptions, Simulator};
 use std::{
     borrow::Cow,
     sync::{
@@ -34,23 +35,27 @@ impl ContractStorage for CustomStorage {
     async fn load_data(
         &self,
         contract: &Hash,
-        key: &ValueCell,
+        key: &OwnedValue,
         topoheight: TopoHeight,
-    ) -> Result<Option<(TopoHeight, Option<ValueCell>)>> {
+    ) -> Result<Option<(TopoHeight, Option<OwnedValue>)>, ReaderError> {
         self.reads.fetch_add(1, Ordering::Relaxed);
         self.inner.load_data(contract, key, topoheight).await
     }
     async fn load_data_latest_topoheight(
         &self,
         contract: &Hash,
-        key: &ValueCell,
+        key: &OwnedValue,
         topoheight: TopoHeight,
-    ) -> Result<Option<TopoHeight>> {
+    ) -> Result<Option<TopoHeight>, ReaderError> {
         self.inner
             .load_data_latest_topoheight(contract, key, topoheight)
             .await
     }
-    async fn has_contract(&self, contract: &Hash, topoheight: TopoHeight) -> Result<bool> {
+    async fn has_contract(
+        &self,
+        contract: &Hash,
+        topoheight: TopoHeight,
+    ) -> Result<bool, ReaderError> {
         self.inner.has_contract(contract, topoheight).await
     }
 }
@@ -62,7 +67,7 @@ impl<'ty> ContractProvider<'ty> for CustomStorage {
         contract: &Hash,
         asset: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<Option<(TopoHeight, u64)>> {
+    ) -> Result<Option<(TopoHeight, u64)>, ReaderError> {
         self.inner
             .get_contract_balance_for_asset(contract, asset, topoheight)
             .await
@@ -72,7 +77,7 @@ impl<'ty> ContractProvider<'ty> for CustomStorage {
         key: &PublicKey,
         asset: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<Option<(TopoHeight, CiphertextCache)>> {
+    ) -> Result<Option<(TopoHeight, CiphertextCache)>, ReaderError> {
         self.inner
             .get_account_balance_for_asset(key, asset, topoheight)
             .await
@@ -81,38 +86,46 @@ impl<'ty> ContractProvider<'ty> for CustomStorage {
         &self,
         contract: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<bool> {
+    ) -> Result<bool, ReaderError> {
         self.inner
             .has_scheduled_execution_at_topoheight(contract, topoheight)
             .await
     }
-    async fn asset_exists(&self, asset: &Hash, topoheight: TopoHeight) -> Result<bool> {
+    async fn asset_exists(
+        &self,
+        asset: &Hash,
+        topoheight: TopoHeight,
+    ) -> Result<bool, ReaderError> {
         self.inner.asset_exists(asset, topoheight).await
     }
     async fn load_asset_data(
         &self,
         asset: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<Option<(TopoHeight, AssetData)>> {
+    ) -> Result<Option<(TopoHeight, AssetData)>, ReaderError> {
         self.inner.load_asset_data(asset, topoheight).await
     }
     async fn load_asset_circulating_supply(
         &self,
         asset: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<(TopoHeight, u64)> {
+    ) -> Result<(TopoHeight, u64), ReaderError> {
         self.inner
             .load_asset_circulating_supply(asset, topoheight)
             .await
     }
-    async fn account_exists(&self, key: &PublicKey, topoheight: TopoHeight) -> Result<bool> {
+    async fn account_exists(
+        &self,
+        key: &PublicKey,
+        topoheight: TopoHeight,
+    ) -> Result<bool, ReaderError> {
         self.inner.account_exists(key, topoheight).await
     }
     async fn load_contract_module(
         &self,
         contract: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<Option<(TopoHeight, Option<ContractModule>)>> {
+    ) -> Result<Option<(TopoHeight, Option<ContractModule>)>, ReaderError> {
         self.inner.load_contract_module(contract, topoheight).await
     }
     async fn has_contract_callback_for_event(
@@ -121,7 +134,7 @@ impl<'ty> ContractProvider<'ty> for CustomStorage {
         event_id: u64,
         listener: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<bool> {
+    ) -> Result<bool, ReaderError> {
         self.inner
             .has_contract_callback_for_event(contract, event_id, listener, topoheight)
             .await
@@ -173,8 +186,8 @@ async fn execution_uses_custom_storage_and_its_commit_boundary() {
         hash.clone(),
         ContractState {
             data: vec![StorageEntry {
-                key: ValueCell::Bytes(b"answer".to_vec()),
-                value: Primitive::U64(42).into(),
+                key: OwnedValue::Bytes(b"answer".to_vec()),
+                value: OwnedValue::from(42u64),
             }],
             ..Default::default()
         },

@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use silex_types::ValueCell;
+use silex_types::OwnedValue;
 use xelis_common::{
     asset::{AssetData, AssetOwner, MaxSupplyMode},
     block::{Block, TopoHeight},
@@ -76,8 +76,8 @@ pub struct ContractState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StorageEntry {
-    pub key: ValueCell,
-    pub value: ValueCell,
+    pub key: OwnedValue,
+    pub value: OwnedValue,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

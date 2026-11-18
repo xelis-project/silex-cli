@@ -32,13 +32,17 @@ fn decode_hash(hash: &str) -> Result<Hash> {
 #[wasm_bindgen(js_name = compileSource)]
 pub fn compile_source(source: &str) -> BrowserResult<Vec<u8>> {
     let (module, _) = contract::compile_source(source)?;
-    Ok(module.to_bytes())
+    Ok(module
+        .to_bytes()
+        .context("failed to serialize binary module")?)
 }
 
 /// Assemble text to a binary versioned module.
 #[wasm_bindgen]
 pub fn assemble(source: &str) -> BrowserResult<Vec<u8>> {
-    Ok(contract::assemble(source)?.to_bytes())
+    Ok(contract::assemble(source)?
+        .to_bytes()
+        .context("failed to serialize binary module")?)
 }
 
 /// Render a binary module as assembly.

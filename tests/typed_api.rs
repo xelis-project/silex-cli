@@ -1,6 +1,6 @@
 use silex_cli::playbook::{PlaybookBlock, PlaybookCall, PlaybookContract};
 use silex_cli::xelis_common::crypto::Hash;
-use silex_cli::{JsonStorage, Playbook, Primitive, RunOptions, Simulator, compile_source};
+use silex_cli::{JsonStorage, OwnedValue, Playbook, RunOptions, Simulator, compile_source};
 
 #[tokio::test]
 async fn caller_supplied_modules_and_playbooks_execute_without_paths() {
@@ -70,6 +70,6 @@ async fn caller_supplied_modules_and_playbooks_execute_without_paths() {
     );
     assert_eq!(
         outcome.storage.contracts[&hash].data[0].value,
-        Primitive::U64(2).into()
+        OwnedValue::from(2u64)
     );
 }

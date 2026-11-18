@@ -1,14 +1,14 @@
 //! Read-only access to the caller's snapshot for upstream contract syscalls.
 
-use anyhow::{Context, Result};
 use async_trait::async_trait;
-use silex_types::ValueCell;
+use silex_types::OwnedValue;
 use xelis_common::{
     account::CiphertextCache,
     asset::AssetData,
     block::TopoHeight,
     contract::{ContractModule, ContractProvider, ContractStorage, ScheduledExecutionKind},
     crypto::{Hash, PublicKey},
+    serializer::ReaderError,
 };
 
 use super::JsonStorage;
@@ -19,9 +19,9 @@ impl ContractStorage for JsonStorage {
     async fn load_data(
         &self,
         contract: &Hash,
-        key: &ValueCell,
+        key: &OwnedValue,
         _: TopoHeight,
-    ) -> Result<Option<(TopoHeight, Option<ValueCell>)>> {
+    ) -> Result<Option<(TopoHeight, Option<OwnedValue>)>, ReaderError> {
         Ok(self
             .contracts
             .get(contract)
@@ -33,9 +33,9 @@ impl ContractStorage for JsonStorage {
     async fn load_data_latest_topoheight(
         &self,
         contract: &Hash,
-        key: &ValueCell,
+        key: &OwnedValue,
         topoheight: TopoHeight,
-    ) -> Result<Option<TopoHeight>> {
+    ) -> Result<Option<TopoHeight>, ReaderError> {
         Ok(self
             .load_data(contract, key, topoheight)
             .await?
@@ -43,7 +43,7 @@ impl ContractStorage for JsonStorage {
     }
 
     /// Report whether this snapshot contains executable code for the contract.
-    async fn has_contract(&self, contract: &Hash, _: TopoHeight) -> Result<bool> {
+    async fn has_contract(&self, contract: &Hash, _: TopoHeight) -> Result<bool, ReaderError> {
         Ok(self
             .contracts
             .get(contract)
@@ -59,7 +59,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         contract: &Hash,
         asset: &Hash,
         _: TopoHeight,
-    ) -> Result<Option<(TopoHeight, u64)>> {
+    ) -> Result<Option<(TopoHeight, u64)>, ReaderError> {
         Ok(self
             .contracts
             .get(contract)
@@ -73,7 +73,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         key: &PublicKey,
         asset: &Hash,
         _: TopoHeight,
-    ) -> Result<Option<(TopoHeight, CiphertextCache)>> {
+    ) -> Result<Option<(TopoHeight, CiphertextCache)>, ReaderError> {
         Ok(self
             .account(key)
             .and_then(|a| a.balances.get(asset))
@@ -90,7 +90,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         &self,
         contract: &Hash,
         topoheight: TopoHeight,
-    ) -> Result<bool> {
+    ) -> Result<bool, ReaderError> {
         Ok(self.scheduled_executions.iter().any(|execution| {
             &execution.contract == contract
                 && matches!(
@@ -102,7 +102,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
     }
 
     /// Report whether the asset is registered in the snapshot.
-    async fn asset_exists(&self, asset: &Hash, _: TopoHeight) -> Result<bool> {
+    async fn asset_exists(&self, asset: &Hash, _: TopoHeight) -> Result<bool, ReaderError> {
         Ok(self.assets.contains_key(asset))
     }
 
@@ -111,7 +111,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         &self,
         asset: &Hash,
         _: TopoHeight,
-    ) -> Result<Option<(TopoHeight, AssetData)>> {
+    ) -> Result<Option<(TopoHeight, AssetData)>, ReaderError> {
         Ok(self
             .assets
             .get(asset)
@@ -123,18 +123,18 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         &self,
         asset: &Hash,
         _: TopoHeight,
-    ) -> Result<(TopoHeight, u64)> {
+    ) -> Result<(TopoHeight, u64), ReaderError> {
         Ok((
             self.topoheight,
             self.assets
                 .get(asset)
-                .context("asset does not exist")?
+                .ok_or_else(|| ReaderError::new(std::io::Error::other("asset does not exist")))?
                 .circulating_supply,
         ))
     }
 
     /// Check registration independently of whether the account has a balance.
-    async fn account_exists(&self, key: &PublicKey, _: TopoHeight) -> Result<bool> {
+    async fn account_exists(&self, key: &PublicKey, _: TopoHeight) -> Result<bool, ReaderError> {
         Ok(self.account(key).is_some())
     }
 
@@ -143,7 +143,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         &self,
         contract: &Hash,
         _: TopoHeight,
-    ) -> Result<Option<(TopoHeight, Option<ContractModule>)>> {
+    ) -> Result<Option<(TopoHeight, Option<ContractModule>)>, ReaderError> {
         Ok(self
             .contracts
             .get(contract)
@@ -157,7 +157,7 @@ impl<'ty> ContractProvider<'ty> for JsonStorage {
         event_id: u64,
         listener: &Hash,
         _: TopoHeight,
-    ) -> Result<bool> {
+    ) -> Result<bool, ReaderError> {
         Ok(self
             .callbacks
             .iter()

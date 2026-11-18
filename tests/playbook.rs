@@ -10,15 +10,14 @@ use silex_cli::xelis_common::{
     crypto::Hash,
 };
 use silex_cli::{
-    ExecutionStorage, Invocation, JsonStorage, Playbook, Primitive, Simulator, ValueCell,
-    compile_source,
+    ExecutionStorage, Invocation, JsonStorage, OwnedValue, Playbook, Simulator, compile_source,
 };
 
-fn value(storage: &JsonStorage, contract: u8, key: &[u8]) -> ValueCell {
+fn value(storage: &JsonStorage, contract: u8, key: &[u8]) -> OwnedValue {
     storage.contracts[&Hash::new([contract; 32])]
         .data
         .iter()
-        .find(|entry| entry.key == ValueCell::Bytes(key.to_vec()))
+        .find(|entry| entry.key == OwnedValue::Bytes(key.to_vec()))
         .unwrap()
         .value
         .clone()
@@ -181,7 +180,7 @@ async fn persisted_block_end_calls_keep_registration_order() {
             hash: Arc::new(Hash::new([n; 32])),
             contract: contract.clone(),
             chunk_id: 0,
-            params: vec![Primitive::U64(n as u64).into()],
+            params: vec![OwnedValue::from(n as u64)],
             max_gas: 1000000,
             gas_sources: [(Source::Contract(contract.clone()), 1000000)].into(),
             kind: ScheduledExecutionKind::BlockEnd,
@@ -209,8 +208,5 @@ async fn persisted_block_end_calls_keep_registration_order() {
             .collect::<Vec<_>>(),
         [Hash::new([2; 32]), Hash::new([1; 32])]
     );
-    assert_eq!(
-        value(&outcome.storage, 4, b"order"),
-        Primitive::U64(1).into()
-    );
+    assert_eq!(value(&outcome.storage, 4, b"order"), OwnedValue::from(1u64));
 }

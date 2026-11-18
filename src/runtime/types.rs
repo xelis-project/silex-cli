@@ -5,7 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::{Context, Result, ensure};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use silex_types::ValueCell;
+use silex_types::OwnedValue;
 use xelis_common::{
     api::RPCContractLog,
     contract::{
@@ -38,7 +38,7 @@ pub struct RunOptions {
     pub deposits: IndexMap<Hash, ContractDeposit>,
     pub gas_sources: Vec<GasSource>,
     pub gas_limit: u64,
-    pub arguments: Vec<ValueCell>,
+    pub arguments: Vec<OwnedValue>,
 
     /// An impersonated caller for fixtures; use `transaction` for transaction semantics.
     pub caller: Option<Address>,
@@ -125,7 +125,7 @@ pub struct Invocation<'a> {
     pub caller: ContractCaller<'a>,
     pub contract: Hash,
     pub deposits: Option<Deposits<'a>>,
-    pub arguments: Vec<ValueCell>,
+    pub arguments: Vec<OwnedValue>,
 
     pub gas_sources: IndexMap<Source, u64>,
     pub max_gas: u64,

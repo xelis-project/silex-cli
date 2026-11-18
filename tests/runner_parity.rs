@@ -11,13 +11,13 @@ use silex_cli::xelis_common::{
     crypto::Hash,
     transaction::ContractDeposit,
 };
-use silex_cli::{ExecutionStorage, Invocation, JsonStorage, Primitive, Simulator, compile_source};
+use silex_cli::{ExecutionStorage, Invocation, JsonStorage, OwnedValue, Simulator, compile_source};
 use std::{borrow::Cow, collections::HashMap};
 
 #[tokio::test]
 async fn library_boundary_matches_direct_runner() {
     for (exit_code, gas_limit, scheduled) in [
-        (0, 100_000, false),
+        (0u64, 100_000, false),
         (1, 100_000, false),
         (0, 0, false),
         (0, 100_000, true),
@@ -42,7 +42,7 @@ async fn library_boundary_matches_direct_runner() {
         );
         let deposits = [(XELIS_ASSET, ContractDeposit::Public(100))].into();
         let decompressed = HashMap::new();
-        let parameters = vec![Primitive::U64(exit_code).into()];
+        let parameters = vec![OwnedValue::from(exit_code)];
         let caller = if scheduled {
             ContractCaller::Scheduled(Cow::Owned(Hash::new([2; 32])), Cow::Owned(hash.clone()))
         } else {

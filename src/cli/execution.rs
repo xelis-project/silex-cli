@@ -99,7 +99,10 @@ pub(super) async fn run(command: SubCommands) -> Result<()> {
                 }
 
                 let module = load_module::<JsonStorage>(&config.input)?;
-                let contract = config.contract.unwrap_or_else(|| hash(&module.to_bytes()));
+                let contract = match config.contract {
+                    Some(contract) => contract,
+                    None => hash(&module.to_bytes()?),
+                };
                 let mut simulator = Simulator::new(fixture)?;
                 println!("Contract hash: {contract}");
                 let result = simulator.run_module(contract, module, options).await?;
@@ -116,7 +119,10 @@ pub(super) async fn run(command: SubCommands) -> Result<()> {
                 }
             } else {
                 let module = load_module::<MockStorageProvider>(&config.input)?;
-                let contract = config.contract.unwrap_or_else(|| hash(&module.to_bytes()));
+                let contract = match config.contract {
+                    Some(contract) => contract,
+                    None => hash(&module.to_bytes()?),
+                };
                 println!("Contract hash: {contract}");
                 let value = run_program::<MockStorageProvider>(
                     &module,

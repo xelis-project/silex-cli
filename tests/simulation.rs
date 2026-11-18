@@ -5,7 +5,7 @@ use silex_cli::xelis_common::{
     crypto::{Hash, KeyPair},
     transaction::ContractDeposit,
 };
-use silex_cli::{JsonStorage, Primitive, RunOptions, Simulator, ValueCell, compile_source};
+use silex_cli::{JsonStorage, OwnedValue, Primitive, RunOptions, Simulator, compile_source};
 
 fn hash(n: u8) -> Hash {
     Hash::new([n; 32])
@@ -77,13 +77,13 @@ async fn storage_persists_across_json_round_trip_and_failure_rolls_back() {
     );
     let value = simulator
         .storage()
-        .load_data(&hash(1), &ValueCell::Bytes(b"count".to_vec()), 1)
+        .load_data(&hash(1), &OwnedValue::Bytes(b"count".to_vec()), 1)
         .await
         .unwrap()
         .unwrap()
         .1
         .unwrap();
-    assert_eq!(value, Primitive::U64(42).into());
+    assert_eq!(value, OwnedValue::from(42u64));
     assert!(
         simulator
             .run(
@@ -161,7 +161,7 @@ async fn arguments_and_gas_are_checked() {
         .run(
             &hash(1),
             RunOptions {
-                arguments: vec![Primitive::U64(0).into()],
+                arguments: vec![OwnedValue::from(0u64)],
                 gas_limit: 0,
                 ..Default::default()
             },
@@ -190,7 +190,7 @@ async fn json_provider_exposes_assets_accounts_and_typed_storage() {
         .data
         .push(StorageEntry {
             key: Primitive::String("key".into()).into(),
-            value: Primitive::U64(7).into(),
+            value: OwnedValue::from(7u64),
         });
     let storage =
         serde_json::from_str::<JsonStorage>(&serde_json::to_string(&storage).unwrap()).unwrap();
@@ -226,8 +226,8 @@ fn invalid_snapshots_are_rejected() {
     );
     let mut storage = funded();
     let entry = StorageEntry {
-        key: Primitive::U64(1).into(),
-        value: Primitive::U64(2).into(),
+        key: OwnedValue::from(1u64),
+        value: OwnedValue::from(2u64),
     };
     storage.contracts.get_mut(&hash(1)).unwrap().data = vec![entry.clone(), entry];
     assert!(Simulator::new(storage).is_err());
@@ -253,14 +253,14 @@ async fn prepaid_deposits_follow_upstream_impersonated_caller_semantics() {
                 .0,
         )
         .unwrap();
-    for code in [1, 0] {
+    for code in [1u64, 0] {
         let result = simulator
             .run(
                 &hash(1),
                 RunOptions {
                     caller: Some(caller.clone()),
                     deposits: [(XELIS_ASSET, ContractDeposit::Public(100))].into(),
-                    arguments: vec![Primitive::U64(code).into()],
+                    arguments: vec![OwnedValue::from(code)],
                     ..Default::default()
                 },
             )
